@@ -7,6 +7,10 @@ import jsonData3 from "../pages/json3.json";
 interface Node {
   address: string;
   address_name: string;
+  x?: number;
+  y?: number;
+  fx?: number | null;
+  fy?: number | null;
 }
 
 interface Edge {
@@ -57,9 +61,18 @@ const GraphViewer: React.FC = () => {
 
     svg.selectAll("*").remove();
 
-    const nodes = graphData.nodes.map((node) => ({
+    const nodes = graphData.nodes.map((node, i) => ({
+      ...node,
       id: node.address,
       label: node.address_name,
+      x:
+        node.x ??
+        width / 2 + 200 * Math.cos((2 * Math.PI * i) / graphData.nodes.length),
+      y:
+        node.y ??
+        height / 2 + 200 * Math.sin((2 * Math.PI * i) / graphData.nodes.length),
+      fx: node.fx ?? null,
+      fy: node.fy ?? null,
     }));
 
     const links = graphData.edges.map((link) => ({
@@ -67,29 +80,6 @@ const GraphViewer: React.FC = () => {
       target: link.to,
       label: `${link.balance_delta}`,
     }));
-
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const radius = Math.min(width, height) / 3;
-
-    nodes.forEach((node: any, i) => {
-      const angle = (i / nodes.length) * 2 * Math.PI;
-      node.x = centerX + radius * Math.cos(angle);
-      node.y = centerY + radius * Math.sin(angle);
-    });
-
-    const simulation = d3
-      .forceSimulation(nodes as any)
-      .force(
-        "link",
-        d3
-          .forceLink(links)
-          .id((d: any) => d.id)
-          .distance(100)
-      )
-      .force("charge", d3.forceManyBody().strength(-200))
-      .force("center", d3.forceCenter(centerX, centerY))
-      .on("tick", ticked);
 
     const link = svg
       .append("g")
@@ -111,9 +101,11 @@ const GraphViewer: React.FC = () => {
       .append("circle")
       .attr("r", 5)
       .attr("fill", "#69b3a2")
+      .attr("cx", (d) => d.x!)
+      .attr("cy", (d) => d.y!)
       .call(
         d3
-          .drag<SVGCircleElement, any>()
+          .drag<SVGCircleElement, Node>()
           .on("start", dragstarted)
           .on("drag", dragged)
           .on("end", dragended)
@@ -126,18 +118,36 @@ const GraphViewer: React.FC = () => {
       .data(nodes)
       .enter()
       .append("text")
-      //@ts-ignore
-      .attr("x", (d) => d.x + 6)
-      //@ts-ignore
-      .attr("y", (d) => d.y + 3)
+      .attr("x", (d) => d.x! + 6)
+      .attr("y", (d) => d.y! + 3)
       .text((d) => d.label);
 
     function ticked() {
       link
-        .attr("x1", (d: any) => d.source.x)
-        .attr("y1", (d: any) => d.source.y)
-        .attr("x2", (d: any) => d.target.x)
-        .attr("y2", (d: any) => d.target.y);
+        .attr(
+          "x1",
+          (d: any) =>
+            (nodes.find((n) => n.id === (d.source.id || d.source)) as any)?.x ??
+            0
+        )
+        .attr(
+          "y1",
+          (d: any) =>
+            (nodes.find((n) => n.id === (d.source.id || d.source)) as any)?.y ??
+            0
+        )
+        .attr(
+          "x2",
+          (d: any) =>
+            (nodes.find((n) => n.id === (d.target.id || d.target)) as any)?.x ??
+            0
+        )
+        .attr(
+          "y2",
+          (d: any) =>
+            (nodes.find((n) => n.id === (d.target.id || d.target)) as any)?.y ??
+            0
+        );
 
       node.attr("cx", (d: any) => d.x).attr("cy", (d: any) => d.y);
 
@@ -145,8 +155,8 @@ const GraphViewer: React.FC = () => {
     }
 
     function dragstarted(
-      event: d3.D3DragEvent<SVGCircleElement, any, any>,
-      d: any
+      event: d3.D3DragEvent<SVGCircleElement, Node, any>,
+      d: Node
     ) {
       if (!event.active) simulation.alphaTarget(0.3).restart();
       d.fx = d.x;
@@ -154,21 +164,37 @@ const GraphViewer: React.FC = () => {
     }
 
     function dragged(
-      event: d3.D3DragEvent<SVGCircleElement, any, any>,
-      d: any
+      event: d3.D3DragEvent<SVGCircleElement, Node, any>,
+      d: Node
     ) {
       d.fx = event.x;
       d.fy = event.y;
+      ticked(); 
     }
 
     function dragended(
-      event: d3.D3DragEvent<SVGCircleElement, any, any>,
-      d: any
+      event: d3.D3DragEvent<SVGCircleElement, Node, any>,
+      d: Node
     ) {
       if (!event.active) simulation.alphaTarget(0);
       d.fx = null;
       d.fy = null;
     }
+
+    const simulation = d3
+      .forceSimulation(nodes as any)
+      .force(
+        "link",
+        d3
+          .forceLink(links)
+          .id((d: any) => d.id)
+          .distance(100)
+      )
+      .force("charge", d3.forceManyBody().strength(-200))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .on("tick", ticked);
+
+    ticked(); 
   };
 
   return (
