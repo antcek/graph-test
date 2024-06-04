@@ -5,8 +5,6 @@ import { Inter } from "next/font/google";
 import React, { useState } from "react";
 import GraphViewer from "../components/graph-component";
 
-const inter = Inter({ subsets: ["latin"] });
-
 export default function Home() {
   return (
     <>
