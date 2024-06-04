@@ -68,12 +68,11 @@ const GraphViewer: React.FC = () => {
       label: `${link.balance_delta}`,
     }));
 
-    // Custom layout
     const centerX = width / 2;
     const centerY = height / 2;
     const radius = Math.min(width, height) / 3;
 
-    nodes.forEach((node, i) => {
+    nodes.forEach((node: any, i) => {
       const angle = (i / nodes.length) * 2 * Math.PI;
       node.x = centerX + radius * Math.cos(angle);
       node.y = centerY + radius * Math.sin(angle);
@@ -127,7 +126,9 @@ const GraphViewer: React.FC = () => {
       .data(nodes)
       .enter()
       .append("text")
+      //@ts-ignore
       .attr("x", (d) => d.x + 6)
+      //@ts-ignore
       .attr("y", (d) => d.y + 3)
       .text((d) => d.label);
 
