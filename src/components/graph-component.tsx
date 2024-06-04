@@ -79,6 +79,19 @@ const GraphViewer: React.FC = () => {
       node.y = centerY + radius * Math.sin(angle);
     });
 
+    const simulation = d3
+      .forceSimulation(nodes as any)
+      .force(
+        "link",
+        d3
+          .forceLink(links)
+          .id((d: any) => d.id)
+          .distance(100)
+      )
+      .force("charge", d3.forceManyBody().strength(-200))
+      .force("center", d3.forceCenter(centerX, centerY))
+      .on("tick", ticked);
+
     const link = svg
       .append("g")
       .attr("stroke", "#999")
@@ -87,11 +100,7 @@ const GraphViewer: React.FC = () => {
       .data(links)
       .enter()
       .append("line")
-      .attr("stroke-width", (d) => Math.sqrt(parseFloat(d.label)))
-      .attr("x1", (d) => (nodes.find((n) => n.id === d.source) as any).x)
-      .attr("y1", (d) => (nodes.find((n) => n.id === d.source) as any).y)
-      .attr("x2", (d) => (nodes.find((n) => n.id === d.target) as any).x)
-      .attr("y2", (d) => (nodes.find((n) => n.id === d.target) as any).y);
+      .attr("stroke-width", (d) => Math.sqrt(parseFloat(d.label)));
 
     const node = svg
       .append("g")
@@ -103,8 +112,6 @@ const GraphViewer: React.FC = () => {
       .append("circle")
       .attr("r", 5)
       .attr("fill", "#69b3a2")
-      .attr("cx", (d) => d.x)
-      .attr("cy", (d) => d.y)
       .call(
         d3
           .drag<SVGCircleElement, any>()
@@ -124,10 +131,23 @@ const GraphViewer: React.FC = () => {
       .attr("y", (d) => d.y + 3)
       .text((d) => d.label);
 
+    function ticked() {
+      link
+        .attr("x1", (d: any) => d.source.x)
+        .attr("y1", (d: any) => d.source.y)
+        .attr("x2", (d: any) => d.target.x)
+        .attr("y2", (d: any) => d.target.y);
+
+      node.attr("cx", (d: any) => d.x).attr("cy", (d: any) => d.y);
+
+      text.attr("x", (d: any) => d.x + 6).attr("y", (d: any) => d.y + 3);
+    }
+
     function dragstarted(
       event: d3.D3DragEvent<SVGCircleElement, any, any>,
       d: any
     ) {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
       d.fx = d.x;
       d.fy = d.y;
     }
@@ -144,6 +164,7 @@ const GraphViewer: React.FC = () => {
       event: d3.D3DragEvent<SVGCircleElement, any, any>,
       d: any
     ) {
+      if (!event.active) simulation.alphaTarget(0);
       d.fx = null;
       d.fy = null;
     }
