@@ -68,18 +68,16 @@ const GraphViewer: React.FC = () => {
       label: `${link.balance_delta}`,
     }));
 
-    const simulation = d3
-      .forceSimulation(nodes)
-      .force(
-        "link",
-        d3
-          .forceLink(links)
-          .id((d: any) => d.id)
-          .distance(100)
-      )
-      .force("charge", d3.forceManyBody().strength(-300))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .on("tick", ticked);
+    // Custom layout
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = Math.min(width, height) / 3;
+
+    nodes.forEach((node, i) => {
+      const angle = (i / nodes.length) * 2 * Math.PI;
+      node.x = centerX + radius * Math.cos(angle);
+      node.y = centerY + radius * Math.sin(angle);
+    });
 
     const link = svg
       .append("g")
@@ -89,7 +87,11 @@ const GraphViewer: React.FC = () => {
       .data(links)
       .enter()
       .append("line")
-      .attr("stroke-width", (d) => Math.sqrt(parseFloat(d.label)));
+      .attr("stroke-width", (d) => Math.sqrt(parseFloat(d.label)))
+      .attr("x1", (d) => (nodes.find((n) => n.id === d.source) as any).x)
+      .attr("y1", (d) => (nodes.find((n) => n.id === d.source) as any).y)
+      .attr("x2", (d) => (nodes.find((n) => n.id === d.target) as any).x)
+      .attr("y2", (d) => (nodes.find((n) => n.id === d.target) as any).y);
 
     const node = svg
       .append("g")
@@ -101,6 +103,8 @@ const GraphViewer: React.FC = () => {
       .append("circle")
       .attr("r", 5)
       .attr("fill", "#69b3a2")
+      .attr("cx", (d) => d.x)
+      .attr("cy", (d) => d.y)
       .call(
         d3
           .drag<SVGCircleElement, any>()
@@ -116,27 +120,14 @@ const GraphViewer: React.FC = () => {
       .data(nodes)
       .enter()
       .append("text")
-      .attr("x", 8)
-      .attr("y", "0.31em")
+      .attr("x", (d) => d.x + 6)
+      .attr("y", (d) => d.y + 3)
       .text((d) => d.label);
-
-    function ticked() {
-      link
-        .attr("x1", (d) => (d.source as any).x)
-        .attr("y1", (d) => (d.source as any).y)
-        .attr("x2", (d) => (d.target as any).x)
-        .attr("y2", (d) => (d.target as any).y);
-
-      node.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
-
-      text.attr("x", (d) => d.x + 6).attr("y", (d) => d.y + 3);
-    }
 
     function dragstarted(
       event: d3.D3DragEvent<SVGCircleElement, any, any>,
       d: any
     ) {
-      if (!event.active) simulation.alphaTarget(0.3).restart();
       d.fx = d.x;
       d.fy = d.y;
     }
@@ -153,7 +144,6 @@ const GraphViewer: React.FC = () => {
       event: d3.D3DragEvent<SVGCircleElement, any, any>,
       d: any
     ) {
-      if (!event.active) simulation.alphaTarget(0);
       d.fx = null;
       d.fy = null;
     }
